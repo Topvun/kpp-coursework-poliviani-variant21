@@ -19,7 +19,6 @@ import java.util.List;
 import java.util.Map;
 
 public class ApiClient {
-    // Перевірте, щоб назва збігалася з finalName у server/pom.xml
     private static final String BASE_URL = "http://localhost:8080/courier-delivery-server";
 
     private final HttpClient httpClient;
@@ -30,7 +29,6 @@ public class ApiClient {
         this.mapper = new ObjectMapper();
     }
 
-    // --- Базові методи GET та POST (Пункти 7.3 - 7.12) ---
 
     private String enc(String value) {
         return URLEncoder.encode(value == null ? "" : value, StandardCharsets.UTF_8);
@@ -62,7 +60,7 @@ public class ApiClient {
     }
 
     private String send(HttpRequest request) throws IOException, InterruptedException {
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
         if (response.statusCode() >= 400) {
             throw new IOException("Помилка сервера (HTTP " + response.statusCode() + "):\n" + response.body());
         }

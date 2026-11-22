@@ -185,7 +185,7 @@ public class MainApp extends Application {
         clientAddressField.clear();
     }
 
-    // ==================== 2. ВКЛАДКА КУР'ЄРІВ ====================
+    // ==================== 2. ВКЛАДКА КУР'ЄРІВ + CSV-ІМПОРТ ====================
     private VBox createCourierView() {
         courierTable = new TableView<>();
         TableColumn<Courier, Long> idCol = new TableColumn<>("ID");
@@ -262,8 +262,55 @@ public class MainApp extends Application {
         Button refreshBtn = new Button("Оновити");
         refreshBtn.setOnAction(e -> loadCouriers());
 
+        Button importCsvBtn = new Button("Імпортувати CSV");
+        ProgressBar importProgress = new ProgressBar(0);
+        importProgress.setPrefWidth(180);
+        Label importStatusLabel = new Label("CSV не імпортовано");
+
+        importCsvBtn.setOnAction(e -> {
+            ImportCouriersTask task = new ImportCouriersTask(
+                    Path.of("sample-data", "couriers.csv"),
+                    apiClient
+            );
+
+            importCsvBtn.setDisable(true);
+            importProgress.progressProperty().bind(task.progressProperty());
+            importStatusLabel.textProperty().bind(task.messageProperty());
+
+            task.setOnSucceeded(ev -> {
+                importProgress.progressProperty().unbind();
+                importStatusLabel.textProperty().unbind();
+                importCsvBtn.setDisable(false);
+                importStatusLabel.setText("Готово. Імпортовано: " + task.getValue());
+                loadCouriers();
+            });
+
+            task.setOnFailed(ev -> {
+                importProgress.progressProperty().unbind();
+                importStatusLabel.textProperty().unbind();
+                importCsvBtn.setDisable(false);
+                Throwable ex = task.getException();
+                String message = (ex != null && ex.getMessage() != null && !ex.getMessage().isBlank())
+                        ? ex.getMessage()
+                        : "Не вдалося виконати імпорт CSV";
+                importStatusLabel.setText("Помилка імпорту");
+                showError("Помилка імпорту CSV", message);
+            });
+
+            task.setOnCancelled(ev -> {
+                importProgress.progressProperty().unbind();
+                importStatusLabel.textProperty().unbind();
+                importCsvBtn.setDisable(false);
+                importStatusLabel.setText("Імпорт скасовано; частина записів могла бути збережена");
+            });
+
+            Thread worker = new Thread(task, "csv-import-couriers");
+            worker.setDaemon(true);
+            worker.start();
+        });
+
         HBox formBox = new HBox(10, courierNameField, courierPhoneField, courierTransportField, courierStatusField);
-        HBox btnBox = new HBox(10, addBtn, updateBtn, deleteBtn, refreshBtn);
+        HBox btnBox = new HBox(10, addBtn, updateBtn, deleteBtn, refreshBtn, importCsvBtn, importProgress, importStatusLabel);
 
         VBox vbox = new VBox(10, courierTable, formBox, btnBox);
         vbox.setPadding(new Insets(15));
@@ -513,12 +560,9 @@ public class MainApp extends Application {
         return vbox;
     }
 
-    /**
-     * Початкова реалізація зчитування та розбору CSV-файлу (Пункт 10)[cite: 2].
-     */
     private void importTestCsvData() {
         try {
-            Path file = Path.of("sample-data", "measurements.csv"); // Замініть назву файлу, якщо у вас інша
+            Path file = Path.of("sample-data", "measurements.csv");
 
             if (!Files.exists(file)) {
                 showError("Помилка CSV", "Файл " + file.toString() + " не знайдено у папці sample-data!");
@@ -528,14 +572,13 @@ public class MainApp extends Application {
             List<String> lines = Files.readAllLines(file, StandardCharsets.UTF_8);
 
             if (lines.size() > 1) {
-                String dataLine = lines.get(1); // Беремо перший рядок даних після заголовка[cite: 2]
+                String dataLine = lines.get(1);
                 String[] parts = dataLine.split(";", -1);
 
                 if (parts.length < 4) {
                     throw new IllegalArgumentException("Некоректна кількість стовпців у CSV: " + parts.length);
                 }
 
-                // Приклад парсингу (адаптуйте під поля вашого CSV)
                 Long clientId = Long.parseLong(parts[0].trim());
                 Long courierId = Long.parseLong(parts[1].trim());
                 Long shipmentId = Long.parseLong(parts[2].trim());
@@ -547,8 +590,8 @@ public class MainApp extends Application {
                         null, clientId, courierId, shipmentId, cost, status, orderDate
                 );
 
-                apiClient.addOrder(newOrder); // Надсилаємо на сервер через HTTP[cite: 2]
-                loadOrders(); // Оновлюємо таблицю замовлень
+                apiClient.addOrder(newOrder);
+                loadOrders();
 
                 Alert alert = new Alert(Alert.AlertType.INFORMATION);
                 alert.setTitle("Успіх CSV");

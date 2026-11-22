@@ -28,7 +28,7 @@ public class ClientDAO {
             while (rs.next()) {
                 Client client = new Client(
                         rs.getLong("id"),
-                        rs.getString("full_name"), // Використовуємо правильну назву стовпця з БД
+                        rs.getString("full_name"),
                         rs.getString("phone"),
                         rs.getString("address")
                 );
@@ -48,7 +48,7 @@ public class ClientDAO {
                 if (rs.next()) {
                     return new Client(
                             rs.getLong("id"),
-                            rs.getString("full_name"), // Використовуємо правильну назву стовпця з БД
+                            rs.getString("full_name"),
                             rs.getString("phone"),
                             rs.getString("address")
                     );

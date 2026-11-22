@@ -14,7 +14,7 @@ public class DeliveryOrder {
     @JsonProperty("orderStatus")
     private String status;
 
-    private String orderDate; // або LocalDate, залежно від вашої реалізації
+    private String orderDate;
 
     public DeliveryOrder() {}
 

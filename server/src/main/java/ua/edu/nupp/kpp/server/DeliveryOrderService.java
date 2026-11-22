@@ -41,10 +41,9 @@ public class DeliveryOrderService {
         LOG.info("Видалено замовлення ID " + id);
     }
 
-    // Метод перевірки допустимості переходу між станами життєвого циклу
     public static boolean isAllowedTransition(OrderStatus from, OrderStatus to) {
         if (from == to) {
-            return false; // Повторний перехід у той самий стан заборонено
+            return false;
         }
 
         // Дозволені послідовні переходи
@@ -52,13 +51,11 @@ public class DeliveryOrderService {
         if (from == OrderStatus.ACCEPTED && to == OrderStatus.IN_TRANSIT) return true;
         if (from == OrderStatus.IN_TRANSIT && to == OrderStatus.DELIVERED) return true;
 
-        // Можливість скасування з перших двох станів
         if ((from == OrderStatus.NEW || from == OrderStatus.ACCEPTED) && to == OrderStatus.CANCELLED) return true;
 
         return false;
     }
 
-    // Безпечна зміна стану з перевіркою бізнес-правил
     public void changeState(long id, OrderStatus nextStatus) throws SQLException {
         if (nextStatus == null) {
             throw new IllegalArgumentException("Новий статус не може бути null");

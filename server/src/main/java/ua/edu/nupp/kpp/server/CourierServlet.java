@@ -33,22 +33,22 @@ public class CourierServlet extends HttpServlet {
         String action = req.getParameter("action");
         try {
             if ("add".equals(action)) {
-                Courier courier = new Courier(
-                        null,
-                        req.getParameter("full_name"),
-                        req.getParameter("phone"),
-                        req.getParameter("vehicle_type")
-                );
+                String name = firstNonNull(req.getParameter("name"), req.getParameter("full_name"));
+                String phone = req.getParameter("phone");
+                String transportType = firstNonNull(req.getParameter("transportType"), req.getParameter("vehicle_type"));
+                String status = req.getParameter("status");
+
+                Courier courier = buildCourier(null, name, phone, transportType, status);
                 service.add(courier);
                 writeOk(resp);
             } else if ("update".equals(action)) {
                 long id = Long.parseLong(req.getParameter("id"));
-                Courier courier = new Courier(
-                        id,
-                        req.getParameter("full_name"),
-                        req.getParameter("phone"),
-                        req.getParameter("vehicle_type")
-                );
+                String name = firstNonNull(req.getParameter("name"), req.getParameter("full_name"));
+                String phone = req.getParameter("phone");
+                String transportType = firstNonNull(req.getParameter("transportType"), req.getParameter("vehicle_type"));
+                String status = req.getParameter("status");
+
+                Courier courier = buildCourier(id, name, phone, transportType, status);
                 service.update(courier);
                 writeOk(resp);
             } else if ("delete".equals(action)) {
@@ -61,6 +61,27 @@ public class CourierServlet extends HttpServlet {
         } catch (Exception e) {
             writeError(resp, e);
         }
+    }
+
+    private Courier buildCourier(Long id, String name, String phone, String transportType, String status) {
+        try {
+            return Courier.class
+                    .getConstructor(Long.class, String.class, String.class, String.class, String.class)
+                    .newInstance(id, name, phone, transportType, status);
+        } catch (ReflectiveOperationException e) {
+            Courier courier = new Courier(id, name, phone, transportType);
+            if (status != null) {
+                try {
+                    Courier.class.getMethod("setStatus", String.class).invoke(courier, status);
+                } catch (ReflectiveOperationException ignored) {
+                }
+            }
+            return courier;
+        }
+    }
+
+    private String firstNonNull(String primary, String fallback) {
+        return primary != null ? primary : fallback;
     }
 
     private void writeOk(HttpServletResponse resp) throws IOException {
